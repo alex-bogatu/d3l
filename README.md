@@ -14,6 +14,7 @@ The implementation is approximate because not all notions proposed in the paper 
 * The indexing evidence for numerical data is different from the one presented in the paper. In this package, numerical columns are transformed to their density-based histograms and indexed under a random projection LSH index.
 * The distance aggregation function (Equation 3 from the paper) is not yet implemented. In fact, the aggregation function is customizable. During testing, a simple average of distances has proven comparabel to the level reported in the paper.
 * The package uses similarity scores (between 0 and 1) instead of distances, as described in the paper.
+* The join path discovery functionality from the paper is not yet implemented. This part of the implamantation will follow shortly. 
 
 ## Installation
 
@@ -35,7 +36,7 @@ Substitute a specific branch name or tag in place of `{tag|branch}`.
 
 ## Usage
 
-See [here]() for an example notebook.
+See [here](./examples/notebooks/D3L_hello_world.ipynb) for an example notebook.
 
 ## Contributing
 
