@@ -2,7 +2,6 @@
 <p align="center">Similarity-based data discovery in data lakes</p>
 
 <p align="center">
-<a href="#"><img alt="code-owner-badge" src="https://img.shields.io/badge/owner-peak-blue.svg"></a>
 <a href="https://github.com/ambv/black"><img alt="Code style: black" src="https://img.shields.io/badge/code%20style-black-000000.svg"></a>
 </p>
 
