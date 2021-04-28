@@ -19,41 +19,41 @@ if __name__ == "__main__":
         header=0,
         sep=','
     )
-    # name_index = unpickle_python_object('./name.lsh')
-    # for ht in name_index.lsh_index._hashtables:
-    #     for _, bucket in ht.items():
-    #         if len(bucket) > 1:
-    #             print(bucket)
+    name_index = unpickle_python_object('./name.lsh')
+    for ht in name_index.lsh_index._hashtables:
+        for _, bucket in ht.items():
+            if len(bucket) > 1:
+                print(bucket)
 
-    # name_index = NameIndex(
-    #     dataloader=csvdl
-    # )
-    # pickle_python_object(name_index, './name.lsh')
-    # print("Name: SAVED!")
-    #
-    # format_index = FormatIndex(
-    #     dataloader=csvdl
-    # )
-    # pickle_python_object(format_index, './format.lsh')
-    # print("Format: SAVED!")
-    #
-    # value_index = ValueIndex(
-    #     dataloader=csvdl
-    # )
-    # pickle_python_object(value_index, './value.lsh')
-    # print("Value: SAVED!")
+    name_index = NameIndex(
+        dataloader=csvdl
+    )
+    pickle_python_object(name_index, './name.lsh')
+    print("Name: SAVED!")
 
-    # embedding_index = EmbeddingIndex(
-    #     dataloader=csvdl
-    # )
-    # pickle_python_object(embedding_index, './embedding.lsh')
-    # print("Embedding: SAVED!")
-    #
-    # distribution_index = DistributionIndex(
-    #     dataloader=csvdl
-    # )
-    # pickle_python_object(distribution_index, './distribution.lsh')
-    # print("Distribution: SAVED!")
+    format_index = FormatIndex(
+        dataloader=csvdl
+    )
+    pickle_python_object(format_index, './format.lsh')
+    print("Format: SAVED!")
+
+    value_index = ValueIndex(
+        dataloader=csvdl
+    )
+    pickle_python_object(value_index, './value.lsh')
+    print("Value: SAVED!")
+
+    embedding_index = EmbeddingIndex(
+        dataloader=csvdl
+    )
+    pickle_python_object(embedding_index, './embedding.lsh')
+    print("Embedding: SAVED!")
+
+    distribution_index = DistributionIndex(
+        dataloader=csvdl
+    )
+    pickle_python_object(distribution_index, './distribution.lsh')
+    print("Distribution: SAVED!")
 
 
     name_index = unpickle_python_object('./name.lsh')
