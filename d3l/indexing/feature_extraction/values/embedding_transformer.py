@@ -1,13 +1,17 @@
 import os
-from typing import Iterable, Set
+from typing import Iterable, Set, Optional
 
 import numpy as np
 from fasttext import load_model
-from fasttext.util import download_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from d3l.utils.constants import STOPWORDS
+from d3l.utils.constants import STOPWORDS, FASTTEXTURL
 from d3l.utils.functions import shingles
+
+try:
+    from urllib.request import urlopen
+except ImportError:
+    from urllib2 import urlopen
 
 
 class EmbeddingTransformer:
@@ -17,6 +21,7 @@ class EmbeddingTransformer:
         max_df: float = 0.5,
         stop_words: Iterable[str] = STOPWORDS,
         embedding_model_lang="en",
+        cache_dir: Optional[str] = None,
     ):
         """
         Instantiate a new embedding-based transformer
@@ -31,30 +36,138 @@ class EmbeddingTransformer:
             A collection of stopwords to ignore that defaults to NLTK's English stopwords.
         embedding_model_lang : str
             The embedding model language.
+        cache_dir : Optional[str]
+            An exising directory path where the model will be stored.
+            If not given, the current working directory will be used.
         """
 
         self._token_pattern = token_pattern
         self._max_df = max_df
         self._stop_words = stop_words
         self._embedding_model_lang = embedding_model_lang
+        self._cache_dir = (
+            cache_dir if cache_dir is not None and os.path.isdir(cache_dir) else None
+        )
 
-        self._embedding_model = EmbeddingTransformer.get_embedding_model(
-            self._embedding_model_lang, overwrite=False
+        self._embedding_model = self.get_embedding_model(
+            model_lang=self._embedding_model_lang,
+            overwrite=False,
+            cache_dir=self._cache_dir,
         )
 
     def __getstate__(self):
         d = self.__dict__
-        self_dict = {k: d[k] for k in d if k != '_embedding_model'}
+        self_dict = {k: d[k] for k in d if k != "_embedding_model"}
         return self_dict
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self._embedding_model = EmbeddingTransformer.get_embedding_model(
+        self._embedding_model = self.get_embedding_model(
             self._embedding_model_lang, overwrite=False
         )
 
-    @staticmethod
-    def get_embedding_model(model_lang: str = "en", overwrite: bool = False):
+    @property
+    def cache_dir(self) -> Optional[str]:
+        return self._cache_dir
+
+    def _download_fasttext(self, model_file_name: str, chunk_size: int = 2 ** 13):
+        """
+        Download pre-trained common-crawl vectors from fastText's website
+        https://fasttext.cc/docs/en/crawl-vectors.html
+
+        Parameters
+        ----------
+        model_file_name : str
+            The model file name to download.
+        chunk_size : int
+            The Fasttext models are commonly large - several GBs.
+            The disk writing will therefore be made in chunks.
+
+        Returns
+        -------
+
+        """
+
+        url = FASTTEXTURL + model_file_name
+        print("Downloading %s" % url)
+        response = urlopen(url)
+
+        if hasattr(response, "getheader"):
+            file_size = int(response.getheader("Content-Length").strip())
+        else:
+            file_size = int(response.info().getheader("Content-Length").strip())
+        downloaded = 0
+
+        write_file_name = (
+            os.path.join(self._cache_dir, model_file_name)
+            if self._cache_dir is not None
+            else model_file_name
+        )
+        download_file_name = write_file_name + ".part"
+        with open(download_file_name, "wb") as f:
+            while True:
+                chunk = response.read(chunk_size)
+                downloaded += len(chunk)
+                if not chunk:
+                    break
+                f.write(chunk)
+                # print("{} downloaded ...".format(downloaded))
+
+        os.rename(download_file_name, write_file_name)
+
+    def _download_model(self, if_exists: str = "strict"):
+        """
+        Download the pre-trained model file.
+        Parameters
+        ----------
+        if_exists : str
+            Supported values:
+                - *ignore*: The model will not be downloaded
+                - *strict*: This is the defaul. The model will be downloaded only if it does not exist at the *cache_dir*.
+                - *overwrite*: The model will be downloaded even if it already exists at the *cache_dir*.
+
+        Returns
+        -------
+
+        """
+
+        base_file_name = "cc.%s.300.bin" % self._embedding_model_lang
+        file_name = (
+            os.path.join(self._cache_dir, base_file_name)
+            if self._cache_dir is not None
+            else base_file_name
+        )
+        gz_file_name = "%s.gz" % base_file_name
+
+        if os.path.isfile(file_name):
+            if if_exists == "ignore":
+                return file_name
+            elif if_exists == "strict":
+                print("File exists. Use --overwrite to download anyway.")
+                return file_name
+            elif if_exists == "overwrite":
+                pass
+
+        self._download_fasttext(gz_file_name)
+
+        if self._cache_dir is not None:
+            gz_file_name = os.path.join(self._cache_dir, gz_file_name)
+        with gzip.open(gz_file_name, "rb") as f:
+            with open(file_name, "wb") as f_out:
+                shutil.copyfileobj(f, f_out)
+
+        """Cleanup"""
+        if os.path.isfile(gz_file_name):
+            os.remove(gz_file_name)
+
+        return file_name
+
+    def get_embedding_model(
+        self,
+        model_lang: str = "en",
+        overwrite: bool = False,
+        cache_dir: Optional[str] = None,
+    ):
         """
         Download, if not exists, and load the pretrained FastText embedding model in the working directory.
         Note that the default gzipped English Common Crawl FastText model has 4.2 GB
@@ -65,18 +178,17 @@ class EmbeddingTransformer:
             The model language.
         overwrite : bool
             If True overwrites the model if exists.
+        cache_dir : Optional[str]
+            An exising directory path where the model will be stored.
+            If not given, the current working directory will be used.
         Returns
         -------
 
         """
         if_exists = "strict" if not overwrite else "overwrite"
-        file_name = "cc.%s.300.bin" % model_lang
 
-        download_model(lang_id=model_lang, if_exists=if_exists)
-
-        if os.path.isfile("./{}.gz".format(file_name)):
-            os.remove("./{}.gz".format(file_name))
-        embedding_model = load_model("./{}".format(file_name))
+        model_file = self._download_model(if_exists=if_exists)
+        embedding_model = load_model(model_file)
         return embedding_model
 
     def get_embedding_dimension(self) -> int:
