@@ -26,3 +26,5 @@ ALPHANUM = re.compile(r"(?:[0-9]+[a-zA-Z]|[a-zA-Z]+[0-9])[a-zA-Z0-9]*")
 NUMSYMB = re.compile(
     r"(?=.*[0-9,\.])(?=.*[" + SYMBPATT + r"]+)([0-9" + SYMBPATT + r"]+)", re.UNICODE
 )
+
+FASTTEXTURL = "https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/"

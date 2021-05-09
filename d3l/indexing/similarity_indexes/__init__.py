@@ -432,6 +432,7 @@ class EmbeddingIndex(SimilarityIndex):
         index_similarity_threshold: float = 0.5,
         index_fp_fn_weights: Tuple[float, float] = (0.5, 0.5),
         index_seed: int = 12345,
+        index_cache_dir: Optional[str] = None
     ):
         """
 
@@ -464,6 +465,9 @@ class EmbeddingIndex(SimilarityIndex):
             Their sum has to be 1.
         index_seed : int
             The random seed for the underlying hash generator.
+        index_cache_dir : str
+            A file system path for storing the embedding model.
+
         """
         super(EmbeddingIndex, self).__init__(dataloader=dataloader, data_root=data_root)
 
@@ -476,11 +480,14 @@ class EmbeddingIndex(SimilarityIndex):
         self.index_fp_fn_weights = index_fp_fn_weights
         self.index_seed = index_seed
 
+        self.index_cache_dir = index_cache_dir
+
         self.transformer = EmbeddingTransformer(
             token_pattern=self.transformer_token_pattern,
             max_df=self.transformer_max_df,
             stop_words=self.transformer_stop_words,
             embedding_model_lang=self.transformer_embedding_model_lang,
+            cache_dir=self.index_cache_dir
         )
         self.lsh_index = self.create_index()
 
