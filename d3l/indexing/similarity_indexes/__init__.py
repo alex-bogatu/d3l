@@ -10,6 +10,7 @@ from d3l.indexing.feature_extraction.values.embedding_transformer import (
     EmbeddingTransformer,
 )
 from d3l.indexing.feature_extraction.values.fd_transformer import FDTransformer
+from d3l.indexing.feature_extraction.values.glove_transformer import GloveTransformer
 from d3l.indexing.feature_extraction.values.token_transformer import TokenTransformer
 from d3l.indexing.lsh.lsh_index import LSHIndex
 from d3l.input_output.dataloaders import DataLoader
@@ -482,11 +483,18 @@ class EmbeddingIndex(SimilarityIndex):
 
         self.index_cache_dir = index_cache_dir
 
-        self.transformer = EmbeddingTransformer(
+        # self.transformer = EmbeddingTransformer(
+        #     token_pattern=self.transformer_token_pattern,
+        #     max_df=self.transformer_max_df,
+        #     stop_words=self.transformer_stop_words,
+        #     embedding_model_lang=self.transformer_embedding_model_lang,
+        #     cache_dir=self.index_cache_dir
+        # )
+
+        self.transformer = GloveTransformer(
             token_pattern=self.transformer_token_pattern,
             max_df=self.transformer_max_df,
             stop_words=self.transformer_stop_words,
-            embedding_model_lang=self.transformer_embedding_model_lang,
             cache_dir=self.index_cache_dir
         )
         self.lsh_index = self.create_index()

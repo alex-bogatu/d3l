@@ -1,24 +1,23 @@
-import gzip
 import os
-import shutil
-from typing import Iterable, Optional, Set
-from urllib.request import urlopen
+import random
+import zipfile
+from typing import Iterable, Set, Optional, Dict
 
 import numpy as np
-from fasttext import load_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from d3l.utils.constants import FASTTEXTURL, STOPWORDS
+from d3l.utils.constants import STOPWORDS, GLOVEURL
 from d3l.utils.functions import shingles
+from urllib.request import urlopen
 
 
-class EmbeddingTransformer:
+class GloveTransformer:
     def __init__(
         self,
         token_pattern: str = r"(?u)\b\w\w+\b",
         max_df: float = 0.5,
         stop_words: Iterable[str] = STOPWORDS,
-        embedding_model_lang="en",
+        model_name: str = "glove.42B.300d",
         cache_dir: Optional[str] = None,
     ):
         """
@@ -32,8 +31,10 @@ class EmbeddingTransformer:
             Percentage of values the token can appear in before it is ignored.
         stop_words : Iterable[str]
             A collection of stopwords to ignore that defaults to NLTK's English stopwords.
-        embedding_model_lang : str
-            The embedding model language.
+        model_name : str
+            The embedding model name to download from Stanford's website.
+            It does not have to include to *.zip* extension.
+            By default, the *Common Crawl 42B* model will be used.
         cache_dir : Optional[str]
             An exising directory path where the model will be stored.
             If not given, the current working directory will be used.
@@ -42,14 +43,16 @@ class EmbeddingTransformer:
         self._token_pattern = token_pattern
         self._max_df = max_df
         self._stop_words = stop_words
-        self._embedding_model_lang = embedding_model_lang
+        self._model_name = model_name
         self._cache_dir = (
             cache_dir if cache_dir is not None and os.path.isdir(cache_dir) else None
         )
 
         self._embedding_model = self.get_embedding_model(
-            overwrite=False,
+            model_name=model_name,
+            overwrite=False
         )
+        self._embedding_dimension = self.get_embedding_dimension()
 
     def __getstate__(self):
         d = self.__dict__
@@ -58,21 +61,27 @@ class EmbeddingTransformer:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self._embedding_model = self.get_embedding_model(overwrite=False)
+        self._embedding_model = self.get_embedding_model(
+            model_name=self._model_name, overwrite=False
+        )
 
     @property
     def cache_dir(self) -> Optional[str]:
         return self._cache_dir
 
-    def _download_fasttext(self, model_file_name: str, chunk_size: int = 2 ** 13):
+    def _download_glove(self,
+                        model_name: str = "glove.42B.300d",
+                        chunk_size: int = 2 ** 13):
         """
-        Download pre-trained common-crawl vectors from fastText's website
+        Download pre-trained GloVe vectors from Stanford's website
         https://fasttext.cc/docs/en/crawl-vectors.html
 
         Parameters
         ----------
-        model_file_name : str
-            The model file name to download.
+         model_name : str
+            The embedding model name to download from Stanford's website.
+            It does not have to include to *.zip* extension.
+            By default, the *Common Crawl 42B* model will be used.
         chunk_size : int
             The Fasttext models are commonly large - several GBs.
             The disk writing will therefore be made in chunks.
@@ -82,15 +91,15 @@ class EmbeddingTransformer:
 
         """
 
-        url = FASTTEXTURL + model_file_name
+        url = GLOVEURL + model_name
         print("Downloading %s" % url)
         response = urlopen(url)
 
         downloaded = 0
         write_file_name = (
-            os.path.join(self._cache_dir, model_file_name)
+            os.path.join(self._cache_dir, model_name)
             if self._cache_dir is not None
-            else model_file_name
+            else model_name
         )
         download_file_name = write_file_name + ".part"
         with open(download_file_name, "wb") as f:
@@ -104,15 +113,21 @@ class EmbeddingTransformer:
 
         os.rename(download_file_name, write_file_name)
 
-    def _download_model(self, if_exists: str = "strict"):
+    def _download_model(self,
+                        model_name: str = "glove.42B.300d",
+                        if_exists: str = "strict"):
         """
         Download the pre-trained model file.
         Parameters
         ----------
+        model_name : str
+            The embedding model name to download from Stanford's website.
+            It does not have to include to *.zip* extension.
+            By default, the *Common Crawl 42B* model will be used.
         if_exists : str
             Supported values:
                 - *ignore*: The model will not be downloaded
-                - *strict*: This is the defaul. The model will be downloaded only if it does not exist at the *cache_dir*.
+                - *strict*: This is the default. The model will be downloaded only if it does not exist at the *cache_dir*.
                 - *overwrite*: The model will be downloaded even if it already exists at the *cache_dir*.
 
         Returns
@@ -120,14 +135,13 @@ class EmbeddingTransformer:
 
         """
 
-        base_file_name = "cc.%s.300.bin" % self._embedding_model_lang
+        base_file_name = "%s.txt" % model_name
         file_name = (
             os.path.join(self._cache_dir, base_file_name)
             if self._cache_dir is not None
             else base_file_name
         )
-        gz_file_name = "%s.gz" % base_file_name
-
+        gz_file_name = "%s.zip" % model_name
         if os.path.isfile(file_name):
             if if_exists == "ignore":
                 return file_name
@@ -137,13 +151,14 @@ class EmbeddingTransformer:
             elif if_exists == "overwrite":
                 pass
 
-        self._download_fasttext(gz_file_name)
+        self._download_glove(gz_file_name)
 
+        extract_dir = "."
         if self._cache_dir is not None:
             gz_file_name = os.path.join(self._cache_dir, gz_file_name)
-        with gzip.open(gz_file_name, "rb") as f:
-            with open(file_name, "wb") as f_out:
-                shutil.copyfileobj(f, f_out)
+            extract_dir = self._cache_dir
+        with zipfile.ZipFile(gz_file_name, "r") as f:
+            f.extractall(extract_dir)
 
         """Cleanup"""
         if os.path.isfile(gz_file_name):
@@ -153,25 +168,34 @@ class EmbeddingTransformer:
 
     def get_embedding_model(
         self,
-        overwrite: bool = False,
-    ):
+        model_name: str = "glove.42B.300d",
+        overwrite: bool = False
+    ) -> Dict:
         """
-        Download, if not exists, and load the pretrained FastText embedding model in the working directory.
-        Note that the default gzipped English Common Crawl FastText model has 4.2 GB
-        and its unzipped version has 6.7 GB.
+        Download, if not exists, and load the pretrained GloVe embedding model in the working directory.
         Parameters
         ----------
+        model_name : str
+            The embedding model name to download from Stanford's website.
+            It does not have to include to *.zip* extension.
+            By default, the *Common Crawl 42B* model will be used.
         overwrite : bool
             If True overwrites the model if exists.
-
         Returns
         -------
 
         """
         if_exists = "strict" if not overwrite else "overwrite"
 
-        model_file = self._download_model(if_exists=if_exists)
-        embedding_model = load_model(model_file)
+        model_file = self._download_model(model_name=model_name, if_exists=if_exists)
+        embedding_model = {}
+        with open(model_file, 'r') as f:
+            for line in f:
+                values = line.split()
+                word = values[0]
+                vector = np.asarray(values[1:], "float32")
+                embedding_model[word] = vector
+
         return embedding_model
 
     def get_embedding_dimension(self) -> int:
@@ -182,7 +206,7 @@ class EmbeddingTransformer:
         int
             The dimensions of each embedding
         """
-        return self._embedding_model.get_dimension()
+        return len(self._embedding_model.get(random.choice(list(self._embedding_model.keys()))))
 
     def get_vector(self, word: str) -> np.ndarray:
         """
@@ -198,8 +222,8 @@ class EmbeddingTransformer:
         np.ndarray
             A vector of float numbers.
         """
-        vector = self._embedding_model.get_word_vector(str(word).strip().lower(),
-                                                       np.random.randn(self.get_embedding_dimension()))
+        vector = self._embedding_model.get(str(word).strip().lower(),
+                                           np.random.randn(self._embedding_dimension))
         return vector
 
     def get_tokens(self, input_values: Iterable[str]) -> Set[str]:

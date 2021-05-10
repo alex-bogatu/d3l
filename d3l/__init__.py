@@ -35,7 +35,7 @@ if __name__ == "__main__":
     # print("Value: SAVED!")
 
     # embedding_index = EmbeddingIndex(dataloader=csvdl, index_cache_dir='../examples/notebooks')
-    # pickle_python_object(embedding_index, "./embedding.lsh")
+    # pickle_python_object(embedding_index, "../examples/notebooks/glove_embedding.lsh")
     # print("Embedding: SAVED!")
 
     # distribution_index = DistributionIndex(dataloader=csvdl)
@@ -45,7 +45,7 @@ if __name__ == "__main__":
     name_index = unpickle_python_object("../examples/notebooks/name.lsh")
     format_index = unpickle_python_object("../examples/notebooks/format.lsh")
     value_index = unpickle_python_object("../examples/notebooks/value.lsh")
-    embedding_index = unpickle_python_object("../examples/notebooks/embedding.lsh")
+    embedding_index = unpickle_python_object("../examples/notebooks/glove_embedding.lsh")
     distribution_index = unpickle_python_object("../examples/notebooks/distribution.lsh")
 
     qe = QueryEngine(
