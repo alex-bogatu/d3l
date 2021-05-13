@@ -1,20 +1,18 @@
 import os
-from typing import Iterable, Set, Optional
+import shutil
+from typing import Iterable, Optional, Set
+from urllib.request import urlopen
 
 import numpy as np
+import gzip
 from fasttext import load_model
 from sklearn.feature_extraction.text import TfidfVectorizer
 
-from d3l.utils.constants import STOPWORDS, FASTTEXTURL
+from d3l.utils.constants import FASTTEXTURL, STOPWORDS
 from d3l.utils.functions import shingles
 
-try:
-    from urllib.request import urlopen
-except ImportError:
-    from urllib2 import urlopen
 
-
-class EmbeddingTransformer:
+class FasttextTransformer:
     def __init__(
         self,
         token_pattern: str = r"(?u)\b\w\w+\b",
@@ -50,9 +48,7 @@ class EmbeddingTransformer:
         )
 
         self._embedding_model = self.get_embedding_model(
-            model_lang=self._embedding_model_lang,
             overwrite=False,
-            cache_dir=self._cache_dir,
         )
 
     def __getstate__(self):
@@ -62,9 +58,7 @@ class EmbeddingTransformer:
 
     def __setstate__(self, state):
         self.__dict__ = state
-        self._embedding_model = self.get_embedding_model(
-            self._embedding_model_lang, overwrite=False
-        )
+        self._embedding_model = self.get_embedding_model(overwrite=False)
 
     @property
     def cache_dir(self) -> Optional[str]:
@@ -92,12 +86,7 @@ class EmbeddingTransformer:
         print("Downloading %s" % url)
         response = urlopen(url)
 
-        if hasattr(response, "getheader"):
-            file_size = int(response.getheader("Content-Length").strip())
-        else:
-            file_size = int(response.info().getheader("Content-Length").strip())
         downloaded = 0
-
         write_file_name = (
             os.path.join(self._cache_dir, model_file_name)
             if self._cache_dir is not None
@@ -148,25 +137,27 @@ class EmbeddingTransformer:
             elif if_exists == "overwrite":
                 pass
 
-        self._download_fasttext(gz_file_name)
+        absolute_gz_file_name = (
+            os.path.join(self._cache_dir, gz_file_name)
+            if self._cache_dir is not None
+            else gz_file_name
+        )
+        if not os.path.isfile(absolute_gz_file_name):
+            self._download_fasttext(gz_file_name)
 
-        if self._cache_dir is not None:
-            gz_file_name = os.path.join(self._cache_dir, gz_file_name)
-        with gzip.open(gz_file_name, "rb") as f:
+        with gzip.open(absolute_gz_file_name, "rb") as f:
             with open(file_name, "wb") as f_out:
                 shutil.copyfileobj(f, f_out)
 
         """Cleanup"""
-        if os.path.isfile(gz_file_name):
-            os.remove(gz_file_name)
+        if os.path.isfile(absolute_gz_file_name):
+            os.remove(absolute_gz_file_name)
 
         return file_name
 
     def get_embedding_model(
         self,
-        model_lang: str = "en",
         overwrite: bool = False,
-        cache_dir: Optional[str] = None,
     ):
         """
         Download, if not exists, and load the pretrained FastText embedding model in the working directory.
@@ -174,13 +165,9 @@ class EmbeddingTransformer:
         and its unzipped version has 6.7 GB.
         Parameters
         ----------
-        model_lang : str
-            The model language.
         overwrite : bool
             If True overwrites the model if exists.
-        cache_dir : Optional[str]
-            An exising directory path where the model will be stored.
-            If not given, the current working directory will be used.
+
         Returns
         -------
 
@@ -215,10 +202,9 @@ class EmbeddingTransformer:
         np.ndarray
             A vector of float numbers.
         """
-        try:
-            vector = self._embedding_model.get_word_vector(str(word).strip().lower())
-        except KeyError:
-            vector = np.zeros(self.get_embedding_dimension())
+        vector = self._embedding_model.get_word_vector(
+            str(word).strip().lower(), np.random.randn(self.get_embedding_dimension())
+        )
         return vector
 
     def get_tokens(self, input_values: Iterable[str]) -> Set[str]:

@@ -28,3 +28,4 @@ NUMSYMB = re.compile(
 )
 
 FASTTEXTURL = "https://dl.fbaipublicfiles.com/fasttext/vectors-crawl/"
+GLOVEURL = "http://nlp.stanford.edu/data/"
