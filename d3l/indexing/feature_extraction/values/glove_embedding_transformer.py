@@ -151,18 +151,22 @@ class GloveTransformer:
             elif if_exists == "overwrite":
                 pass
 
-        self._download_glove(gz_file_name)
+        absolute_gz_file_name = (
+            os.path.join(self._cache_dir, gz_file_name)
+            if self._cache_dir is not None
+            else gz_file_name
+        )
+        extract_dir = self._cache_dir if self._cache_dir is not None else "."
+        if not os.path.isfile(absolute_gz_file_name):
+            self._download_glove(gz_file_name)
 
-        extract_dir = "."
-        if self._cache_dir is not None:
-            gz_file_name = os.path.join(self._cache_dir, gz_file_name)
-            extract_dir = self._cache_dir
-        with zipfile.ZipFile(gz_file_name, "r") as f:
+        print("Extracting %s" % absolute_gz_file_name)
+        with zipfile.ZipFile(absolute_gz_file_name, "r") as f:
             f.extractall(extract_dir)
 
         """Cleanup"""
-        if os.path.isfile(gz_file_name):
-            os.remove(gz_file_name)
+        if os.path.isfile(absolute_gz_file_name):
+            os.remove(absolute_gz_file_name)
 
         return file_name
 
@@ -189,6 +193,7 @@ class GloveTransformer:
 
         model_file = self._download_model(model_name=model_name, if_exists=if_exists)
         embedding_model = {}
+        print("Loading embeddings. This may take a few minutes ...")
         with open(model_file, 'r') as f:
             for line in f:
                 values = line.split()

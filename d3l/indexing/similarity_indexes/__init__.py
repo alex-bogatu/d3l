@@ -6,11 +6,9 @@ from d3l.indexing.feature_extraction.schema.qgram_transformer import QGramTransf
 from d3l.indexing.feature_extraction.values.distribution_transformer import (
     DistributionTransformer,
 )
-from d3l.indexing.feature_extraction.values.embedding_transformer import (
-    EmbeddingTransformer,
-)
+
 from d3l.indexing.feature_extraction.values.fd_transformer import FDTransformer
-from d3l.indexing.feature_extraction.values.glove_transformer import GloveTransformer
+from d3l.indexing.feature_extraction.values.glove_embedding_transformer import GloveTransformer
 from d3l.indexing.feature_extraction.values.token_transformer import TokenTransformer
 from d3l.indexing.lsh.lsh_index import LSHIndex
 from d3l.input_output.dataloaders import DataLoader
@@ -483,7 +481,7 @@ class EmbeddingIndex(SimilarityIndex):
 
         self.index_cache_dir = index_cache_dir
 
-        # self.transformer = EmbeddingTransformer(
+        # self.transformer = FasttextTransformer(
         #     token_pattern=self.transformer_token_pattern,
         #     max_df=self.transformer_max_df,
         #     stop_words=self.transformer_stop_words,
