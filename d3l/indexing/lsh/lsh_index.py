@@ -385,7 +385,7 @@ class LSHIndex:
         ----------
         query_id : Optional[str]
             The the id of the query_engine.
-            If defined then *query_hash* is ignored.
+            If defined then *query* is ignored.
             If None then it is assumed that the item has not been indexed and *query_hash* must be defined.
         query: Optional[Iterable]
             Since this is a set-based index, the *query* has to be an iterable.
