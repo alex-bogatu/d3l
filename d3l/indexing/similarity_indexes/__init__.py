@@ -148,8 +148,8 @@ class NameIndex(SimilarityIndex):
             lsh_index.add(input_id=str(table), input_set=table_signature)
             column_data = self.dataloader.get_columns(table_name=table)
 
-            column_signatures = [self.transformer.transform(c) for c in column_data]
-            for c, signature in zip(column_data, column_signatures):
+            column_signatures = [(c, self.transformer.transform(c)) for c in column_data]
+            for c, signature in column_signatures:
                 if len(signature) > 0:
                     lsh_index.add(input_id=str(table) + "." + str(c), input_set=signature)
 
@@ -249,11 +249,11 @@ class FormatIndex(SimilarityIndex):
             table_data = self.dataloader.read_table(table_name=table)
 
             column_signatures = [
-                self.transformer.transform(table_data[c].tolist())
+                (c, self.transformer.transform(table_data[c].tolist()))
                 for c in table_data.columns
                 if not is_numeric(table_data[c]) and table_data[c].count() > 0
             ]
-            for c, signature in zip(table_data.columns.tolist(), column_signatures):
+            for c, signature in column_signatures:
                 if len(signature) > 0:
                     lsh_index.add(input_id=str(table) + "." + str(c), input_set=signature)
         return lsh_index
@@ -374,11 +374,11 @@ class ValueIndex(SimilarityIndex):
             table_data = self.dataloader.read_table(table_name=table)
 
             column_signatures = [
-                self.transformer.transform(table_data[c].tolist())
+                (c, self.transformer.transform(table_data[c].tolist()))
                 for c in table_data.columns
                 if not is_numeric(table_data[c]) and table_data[c].count() > 0
             ]
-            for c, signature in zip(table_data.columns.tolist(), column_signatures):
+            for c, signature in column_signatures:
                 if len(signature) > 0:
                     lsh_index.add(input_id=str(table) + "." + str(c), input_set=signature)
 
@@ -519,11 +519,11 @@ class EmbeddingIndex(SimilarityIndex):
             table_data = self.dataloader.read_table(table_name=table)
 
             column_signatures = [
-                self.transformer.transform(table_data[c].tolist())
+                (c, self.transformer.transform(table_data[c].tolist()))
                 for c in table_data.columns
                 if not is_numeric(table_data[c]) and table_data[c].count() > 0
             ]
-            for c, signature in zip(table_data.columns.tolist(), column_signatures):
+            for c, signature in column_signatures:
                 if len(signature) > 0:
                     lsh_index.add(input_id=str(table) + "." + str(c), input_set=signature)
 
@@ -641,11 +641,11 @@ class DistributionIndex(SimilarityIndex):
             table_data = self.dataloader.read_table(table_name=table)
 
             column_signatures = [
-                self.transformer.transform(table_data[c].tolist())
+                (c, self.transformer.transform(table_data[c].tolist()))
                 for c in table_data.columns
                 if is_numeric(table_data[c]) and table_data[c].count() > 0
             ]
-            for c, signature in zip(table_data.columns.tolist(), column_signatures):
+            for c, signature in column_signatures:
                 if len(signature) > 0:
                     lsh_index.add(input_id=str(table) + "." + str(c), input_set=signature)
 

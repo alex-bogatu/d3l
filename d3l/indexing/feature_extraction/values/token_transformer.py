@@ -66,7 +66,7 @@ class TokenTransformer:
         except ValueError:
             return set()
 
-        weight_map = dict(zip(vectorizer.get_feature_names(), vectorizer.idf_))
+        weight_map = dict(zip(vectorizer.get_feature_names_out(), vectorizer.idf_))
         tokenset = set()
         tokenizer = vectorizer.build_tokenizer()
         for value in input_values:

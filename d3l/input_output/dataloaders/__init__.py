@@ -491,15 +491,15 @@ class CSVDataLoader(DataLoader):
                 usecols=table_columns,
                 chunksize=chunk_size,
                 low_memory=False,
-                error_bad_lines=False,
-                warn_bad_lines=False,
+                # error_bad_lines=False, # Deprecated in future versions
+                # warn_bad_lines=False, # Deprecated in future versions
                 **self.loading_kwargs
             )
         return pd.read_csv(
             file_path,
             chunksize=chunk_size,
             low_memory=False,
-            error_bad_lines=False,
-            warn_bad_lines=False,
+            # error_bad_lines=False, # Deprecated in future versions
+            # warn_bad_lines=False, # Deprecated in future versions
             **self.loading_kwargs
         )
